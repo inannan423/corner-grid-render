@@ -8,6 +8,7 @@
     "build": "parcel build index.html"
   },
   "dependencies": {
+    "fs": "^0.0.1-security",
     "three": "0.125.2"
   },
   "devDependencies": {

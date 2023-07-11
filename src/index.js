@@ -1,62 +1,88 @@
-import "./styles.css";
-import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import * as THREE from 'three';
+import result from '../result.json';
 
-const canvas = document.querySelector("canvas.webgl");
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry';
+import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils';
 
-const sizes = {
-  width: window.innerWidth,
-  height: window.innerHeight
-};
+let group, camera, scene, renderer;
 
-const scene = new THREE.Scene();
+init();
+animate();
 
-const cube = new THREE.Mesh(
-  new THREE.BoxBufferGeometry(1, 1, 1),
-  new THREE.MeshBasicMaterial()
-);
+function RandomColor() {
+    const r = Math.floor(Math.random() * 255);
+    const g = Math.floor(Math.random() * 255);
+    const b = Math.floor(Math.random() * 255);
+    return `rgb(${r},${g},${b})`;
+}
 
-scene.add(cube);
+function init() {
+    scene = new THREE.Scene();
+    renderer = new THREE.WebGLRenderer( { antialias: true } );
+    renderer.setPixelRatio( window.devicePixelRatio );
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    renderer.useLegacyLights = false;
+    document.body.appendChild( renderer.domElement );
 
-const camera = new THREE.PerspectiveCamera(
-  75,
-  sizes.width / sizes.height,
-  0.1,
-  100
-);
-camera.position.set(1, 1, 2);
-scene.add(camera);
+    // camera
 
-const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true;
+    camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 1000 );
+    camera.position.set( 15, 20, 30 );
+    scene.add( camera );
 
-const renderer = new THREE.WebGLRenderer({ canvas });
-renderer.setSize(sizes.width, sizes.height);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // controls
 
-const time = new THREE.Clock();
+    const controls = new OrbitControls( camera, renderer.domElement );
+    controls.minDistance = 20;
+    controls.maxDistance = 50;
+    controls.maxPolarAngle = Math.PI / 2;
 
-const tick = () => {
-  const elapsedTime = time.getElapsedTime();
+    // ambient light
 
-  controls.update();
+    scene.add( new THREE.AmbientLight( 0x666666 ) );
 
-  cube.rotation.x = elapsedTime * 0.1;
-  cube.rotation.y = elapsedTime * 0.1;
+    // point light
 
-  renderer.render(scene, camera);
+    const light = new THREE.PointLight( 0xffffff, 3, 0, 0 );
+    camera.add( light );
 
-  window.requestAnimationFrame(tick);
-};
-tick();
+    // helper
+    scene.add( new THREE.AxesHelper( 20 ) );
 
-window.addEventListener("resize", () => {
-  sizes.width = window.innerWidth;
-  sizes.height = window.innerHeight;
+    for (let i = 0; i < result.data.length; i++) {
+        const points = [];
+        const x = result.data[i][0]/200 ;
+        const y = result.data[i][1]/200 ;
+        const z1 = result.data[i][2]/200 ;
+        const z2 = result.data[i][3]/200 ;
+        // 将数据保存到 points 中,不要将线和线之间的点连起来
+        points.push(new THREE.Vector3(x, 0, y));
+        points.push(new THREE.Vector3(x, z2-z1, y));
+        // material
+        const material = new THREE.LineBasicMaterial( { color: RandomColor() } );
+        // geometry
+        const geometry = new THREE.BufferGeometry().setFromPoints( points );
+        const line = new THREE.Line( geometry, material );
+        scene.add( line );
+    }
+    window.addEventListener( 'resize', onWindowResize );
+}
 
-  camera.aspect = sizes.width / sizes.height;
-  camera.updateProjectionMatrix();
+function onWindowResize() {
 
-  renderer.setSize(sizes.width, sizes.height);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-});
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize( window.innerWidth, window.innerHeight );
+
+}
+
+function animate() {
+    requestAnimationFrame( animate );
+    render();
+}
+
+function render() {
+    renderer.render( scene, camera );
+}
